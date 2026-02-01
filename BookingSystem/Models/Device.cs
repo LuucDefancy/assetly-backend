@@ -15,8 +15,7 @@ namespace BookingSystem.Models
         public required string Description { get; set; }
 
         [Required]
-        [MaxLength(30)]
-        public required string Category { get; set; }
+        public int CategoryId { get; set; }
 
         [MaxLength(40)]
         public string? SerialNumber { get; set; }
@@ -37,6 +36,8 @@ namespace BookingSystem.Models
         public DateTime? UpdatedAt { get; set; } = null;
 
         public int? UpdatedBy { get; set; }
+
+        public Category? Category { get; set; }
 
         public ICollection<Rental> Rentals { get; set; } = new List<Rental>();
     }

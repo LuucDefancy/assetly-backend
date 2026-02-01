@@ -12,6 +12,8 @@ namespace BookingSystem.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Rental> Rentals { get; set; }
 
+        public DbSet<Category> Categories { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -8,7 +8,7 @@ namespace BookingSystem.DTOs
         public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
-        public string Category { get; set; }
+        public int CategoryId { get; set; }
         public string SerialNumber { get; set; }
         public string Condition { get; set; }
         public string Status { get; set; }
@@ -16,6 +16,9 @@ namespace BookingSystem.DTOs
         public int CreatedBy { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedBy { get; set; }
+
+        public CategoryDto? Category { get; set; }
+
         public List<RentalMiniDto>? Rentals { get; set; } = new List<RentalMiniDto>();
 
 
@@ -26,13 +29,14 @@ namespace BookingSystem.DTOs
                 Id = device.Id,
                 Name = device.Name,
                 Description = device.Description,
-                Category = device.Category,
+                CategoryId = device.CategoryId,
                 SerialNumber = device.SerialNumber,
                 Condition = device.Condition,
                 Status = device.Status,
                 CreatedAt = device.CreatedAt,
                 CreatedBy = device.CreatedBy,
                 UpdatedAt = device.UpdatedAt,
+                Category = device.Category != null ? CategoryDto.FromMap(device.Category): null,
                 Rentals = includeRentals && device.Rentals != null
             ? device.Rentals.Select(rental => RentalMiniDto.FromMap(rental)).ToList()
             : new List<RentalMiniDto>()

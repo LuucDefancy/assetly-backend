@@ -27,9 +27,10 @@ namespace BookingSystem.Controllers
             var isAdmin = User.IsInRole("Admin");
 
             IQueryable<Device> query = _context.Devices
-                .Include(d => d.Rentals).ThenInclude(rental => rental.User);
+     .Include(d => d.Category) // Category laden
+     .Include(d => d.Rentals).ThenInclude(r => r.User); // Rentals laden
 
-            if(!isAdmin)
+            if (!isAdmin)
             {
                 query = query.Where(device => device.Status == "Verfügbar");
             }
