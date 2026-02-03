@@ -47,6 +47,8 @@ builder.Services.AddDbContext<FirstNetAPIContext>(options =>
 // JWT Service als Scoped registrieren
 builder.Services.AddScoped<JwtService>();
 
+builder.Services.AddScoped<IImageStorageService, LocalFileStorageService>();
+
 // JWT Authentication konfigurieren
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];

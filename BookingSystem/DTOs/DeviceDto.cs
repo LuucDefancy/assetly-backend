@@ -17,6 +17,8 @@ namespace BookingSystem.DTOs
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedBy { get; set; }
 
+        public string? ImageUrl { get; set; }
+
         public CategoryDto? Category { get; set; }
 
         public List<RentalMiniDto>? Rentals { get; set; } = new List<RentalMiniDto>();
@@ -36,7 +38,10 @@ namespace BookingSystem.DTOs
                 CreatedAt = device.CreatedAt,
                 CreatedBy = device.CreatedBy,
                 UpdatedAt = device.UpdatedAt,
-                Category = device.Category != null ? CategoryDto.FromMap(device.Category): null,
+                ImageUrl = !string.IsNullOrEmpty(device.ImageFileName)
+                ? $"/api/device/image/{device.ImageFileName}"
+                : null,
+                Category = device.Category != null ? CategoryDto.FromMap(device.Category) : null,
                 Rentals = includeRentals && device.Rentals != null
             ? device.Rentals.Select(rental => RentalMiniDto.FromMap(rental)).ToList()
             : new List<RentalMiniDto>()

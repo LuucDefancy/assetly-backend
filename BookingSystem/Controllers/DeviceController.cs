@@ -1,6 +1,7 @@
 ﻿using BookingSystem.Data;
 using BookingSystem.DTOs;
 using BookingSystem.Models;
+using BookingSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -15,9 +16,11 @@ namespace BookingSystem.Controllers
     {
 
         private readonly FirstNetAPIContext _context;
-        public DeviceController(FirstNetAPIContext context)
+        private readonly IImageStorageService _imageStorage;
+        public DeviceController(FirstNetAPIContext context, IImageStorageService imageStorage)
         {
             _context = context;
+            _imageStorage = imageStorage;
         }
 
 
@@ -42,6 +45,22 @@ namespace BookingSystem.Controllers
             return Ok(result);
         }
 
+        [HttpGet("image/{fileName}")]
+        public IActionResult GetImage(string fileName)
+        {
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "devices");
+            var filePath = Path.Combine(uploadsPath, fileName);
+
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound();
+            }
+
+            var contentType = GetContentType(fileName);
+            var image = System.IO.File.OpenRead(filePath);
+            return File(image, contentType);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<Device>> GetSpecificDeviceById(int id)
         {
@@ -59,9 +78,9 @@ namespace BookingSystem.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<Device>> CreateDevice(Device device)
+        public async Task<ActionResult<Device>> CreateDevice([FromForm] DeviceCreateDto dto)
         {
-            if (device == null)
+            if (dto == null)
             {
                 return BadRequest();
             }
@@ -75,19 +94,43 @@ namespace BookingSystem.Controllers
                 return NotFound("User does not exist");
             }
 
-            device.CreatedBy = int.Parse(userId);
-            Console.WriteLine(device.CreatedBy);
+            // Bild speichern, falls vorhanden
+            string imageFileName = null;
+            if (dto.Image != null)
+            {
+                try
+                {
+                    imageFileName = await _imageStorage.SaveImageAsync(dto.Image);
+                }
+                catch (ArgumentException ex)
+                {
+                    return BadRequest(ex.Message);
+                }
+            }
+
+            var device = new Device
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                CategoryId = dto.CategoryId,
+                Condition = dto.Condition,
+                SerialNumber = dto.SerialNumber,
+                Status = dto.Status,
+                ImageFileName = imageFileName,
+                CreatedBy = int.Parse(userId)
+            };
+
             _context.Devices.Add(device);
             await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetSpecificDeviceById), new { id = device.Id }, device);
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateDevice(int id, Device updatedDevice)
+        public async Task<IActionResult> UpdateDevice(int id, [FromForm] DeviceUpdateDto dto)
         {
             var device = await _context.Devices.FindAsync(id);
-                //devices.FirstOrDefault(device => device.Id == id);
 
             if (device == null)
             {
@@ -95,7 +138,6 @@ namespace BookingSystem.Controllers
             }
 
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             var user = _context.Users.FirstOrDefault(user => user.Id == int.Parse(userId));
 
             if (user == null && userId != null)
@@ -103,11 +145,31 @@ namespace BookingSystem.Controllers
                 return NotFound("User does not exist");
             }
 
-            device.Name = updatedDevice.Name;
-            device.Description = updatedDevice.Description;
-            device.Category = updatedDevice.Category;
-            device.Condition = updatedDevice.Condition;
-            device.Status = updatedDevice.Status;
+            // Wenn ein neues Bild hochgeladen wird
+            if (dto.Image != null)
+            {
+                // Altes Bild löschen
+                if (!string.IsNullOrEmpty(device.ImageFileName))
+                {
+                    await _imageStorage.DeleteImageAsync(device.ImageFileName);
+                }
+
+                // Neues Bild speichern
+                try
+                {
+                    device.ImageFileName = await _imageStorage.SaveImageAsync(dto.Image);
+                }
+                catch (ArgumentException ex)
+                {
+                    return BadRequest(ex.Message);
+                }
+            }
+
+            device.Name = dto.Name;
+            device.Description = dto.Description;
+            device.CategoryId = dto.CategoryId;
+            device.Condition = dto.Condition;
+            device.Status = dto.Status;
             device.UpdatedAt = DateTime.Now;
             device.UpdatedBy = user.Id;
 
@@ -127,12 +189,32 @@ namespace BookingSystem.Controllers
                 return NotFound();
             }
 
-            _context.Devices.Remove(device);
+            // Bild löschen, falls vorhanden
+            if (!string.IsNullOrEmpty(device.ImageFileName))
+            {
+                await _imageStorage.DeleteImageAsync(device.ImageFileName);
+            }
 
+            _context.Devices.Remove(device);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
+        private string GetContentType(string fileName)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "application/octet-stream"
+            };
+        }
+
     }
+
+
 }

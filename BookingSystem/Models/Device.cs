@@ -37,6 +37,8 @@ namespace BookingSystem.Models
 
         public int? UpdatedBy { get; set; }
 
+        public String? ImageFileName { get; set; }
+
         public Category? Category { get; set; }
 
         public ICollection<Rental> Rentals { get; set; } = new List<Rental>();
